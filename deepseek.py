@@ -46,6 +46,8 @@ def completion(key, model, system, user):
     })
     try:
         choice = result["choices"][0]
+        if not isinstance(choice, dict):
+            raise ValueError()
         if choice.get("finish_reason") != "stop":
             raise ValueError()
         value = json.loads(choice["message"]["content"])
@@ -115,6 +117,9 @@ def validate_picks(result, segments, lo, hi, duration, minimum, maximum, gate=No
 
 
 def select_clips(segments, duration, settings, limit, minimum, maximum, output, gate=None):
+    if not segments and gate is not None:
+        (output / "selection.json").write_text("[]", encoding="utf-8")
+        return []
     if not segments:
         raise ValueError("Whisper found no speech. DeepSeek needs a transcript to select clips.")
     candidates = []
@@ -124,9 +129,25 @@ def select_clips(segments, duration, settings, limit, minimum, maximum, output, 
                 "segments": [{"id": i, "start": s["start"], "end": s["end"], "text": s["text"]}
                              for i, s in enumerate(segments[lo:hi], start=lo)]}
         response = completion(settings["api_key"], settings["model"], PROMPT.read_text(), user)
-        parsed = validate_picks(response, segments, lo, hi, duration, minimum, maximum, gate)
-        if response.get("clips") and not parsed and gate is None:
-            raise ValueError("DeepSeek selected invalid clip boundaries. Retry with different duration limits.")
+        parsed = validate_picks(response, segments, lo, hi, duration, minimum, maximum)
+        if response.get("clips") and not parsed:
+            print("DeepSeek is correcting clip boundaries…", flush=True)
+            user["correction"] = {
+                "previous_selection": response,
+                "instruction": (
+                    "Every previous clip failed validation. Recheck IDs and calculate "
+                    "segments[end_id].end minus segments[start_id].start. "
+                    "Return only clips inside the requested duration range with integer IDs, "
+                    "start_id <= peak_id <= end_id, numeric score 0–100, hook and reason. "
+                    "Return an empty clips list if no complete story fits."
+                ),
+            }
+            response = completion(settings["api_key"], settings["model"], PROMPT.read_text(), user)
+            parsed = validate_picks(response, segments, lo, hi, duration, minimum, maximum)
+            if response.get("clips") and not parsed:
+                raise ValueError("DeepSeek selected invalid clip boundaries after correction. Please retry.")
+        if gate:
+            parsed = [row for row in parsed if gate[0] <= row["peak"] < gate[1]]
         candidates.extend(parsed)
     chosen = []
     for candidate in sorted(candidates, key=lambda c: c["score"], reverse=True):

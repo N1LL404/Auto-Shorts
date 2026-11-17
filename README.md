@@ -106,8 +106,9 @@ boundary validation, chunk coverage, duplicate removal, API error handling,
 credential persistence and the Settings HTTP endpoints. Tests use simulated
 DeepSeek responses and do not spend API credits.
 
-The paid DeepSeek call and real Whisper download still require verification on
-your machine with your credentials and network access.
+Real DeepSeek calls, Whisper download and transcription, and captioned FFmpeg
+rendering have now been tested. See [test results](docs/test-results.md) for
+verified behavior, fixes and remaining live-source limitations.
 
 ## Reference implementation reviewed
 

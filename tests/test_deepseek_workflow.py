@@ -1,3 +1,7 @@
+import io
+import os
+import zipfile
+from types import SimpleNamespace
 import json
 from pathlib import Path
 import tempfile
@@ -65,6 +69,64 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(restored.values["model"], "my-model")
             restored.save({"remove_key": True})
             self.assertFalse(restored.public()["has_key"])
+
+    def test_completion_rejects_malformed_or_truncated_output(self):
+        for value in ({"choices": [None]}, {"choices": [{"finish_reason": "length"}]},
+                      {"choices": [{"finish_reason": "stop", "message": {"content": "  "}}]}):
+            with self.subTest(value=value), patch("deepseek.api_request", return_value=value):
+                with self.assertRaisesRegex(ValueError, "invalid JSON"):
+                    deepseek.completion("key", "model", "JSON", {})
+
+    def test_invalid_selection_gets_one_correction(self):
+        with tempfile.TemporaryDirectory() as temp, patch("deepseek.completion",
+                side_effect=[{"clips": [dict(PICK, end_id=500)]}, {"clips": [PICK]}]) as call:
+            rows = deepseek.select_clips(SEGMENTS, 150, {"api_key": "key", "model": "model"},
+                                        3, 25, 55, Path(temp))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(call.call_count, 2)
+            self.assertIn("correction", call.call_args.args[3])
+
+    def test_transient_errors_retry_but_auth_errors_do_not(self):
+        error = HTTPError("https://api.deepseek.com", 429, "limited", {}, None)
+        with patch("deepseek.urlopen", side_effect=[error, io.BytesIO(b'{"data": []}')]) as request, patch("deepseek.time.sleep"):
+            self.assertEqual(deepseek.api_request("key", "/models"), {"data": []})
+            self.assertEqual(request.call_count, 2)
+
+    def test_silent_live_window_continues_without_paid_call(self):
+        with tempfile.TemporaryDirectory() as temp, patch("deepseek.completion") as call:
+            self.assertEqual(deepseek.select_clips([], 90, {}, 3, 25, 55, Path(temp), (30, 60)), [])
+            call.assert_not_called()
+            with self.assertRaisesRegex(ValueError, "no speech"):
+                deepseek.select_clips([], 90, {}, 3, 25, 55, Path(temp))
+
+    def test_invalid_model_list_is_user_facing_error(self):
+        with tempfile.TemporaryDirectory() as temp, patch("model_settings.api_request", return_value=[]):
+            manager = ModelSettings(Path(temp), threading.RLock())
+            with self.assertRaisesRegex(ValueError, "invalid model list"):
+                manager.discover()
+
+    @unittest.skipUnless(os.environ.get("AUTO_SHORTS_TEST_VIDEO"), "Set AUTO_SHORTS_TEST_VIDEO for real FFmpeg integration")
+    def test_transcript_to_video_and_publish_kit(self):
+        source = Path(os.environ["AUTO_SHORTS_TEST_VIDEO"])
+        fixture = {"choices": [{"finish_reason": "stop", "message": {
+            "content": json.dumps({"clips": [PICK]})}}]}
+        args = SimpleNamespace(whisper="base.en", start=None, selector="deepseek",
+            settings_file=None, clips=3, min_length=25, max_length=55, hook=None,
+            publish_kit=True, captions=True, facecam=(0, 0, .24, .241), center=.5, fps=30)
+        with tempfile.TemporaryDirectory() as temp, patch("autoshorts.transcribe", return_value=SEGMENTS[:11]), patch(
+                "deepseek.urlopen", side_effect=lambda *a, **k: io.BytesIO(json.dumps(fixture).encode())):
+            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "fixture-only"}):
+                rows = autoshorts.process(source, args, Path(temp))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["hook"], PICK["hook"])
+            self.assertEqual((rows[0]["start"], rows[0]["end"]), (5, 35))
+            duration, video, audio = autoshorts.probe(Path(temp) / rows[0]["file"])
+            self.assertAlmostEqual(duration, 30, delta=.15)
+            self.assertEqual((video["width"], video["height"]), (1080, 1920))
+            self.assertTrue(audio)
+            with zipfile.ZipFile(Path(temp) / rows[0]["kit"]) as kit:
+                self.assertEqual(set(kit.namelist()), {"short.mp4", "cover.jpg", "post.txt"})
+            self.assertEqual(len(json.loads((Path(temp) / "transcript.json").read_text())), 11)
 
     def test_settings_api_and_job_command(self):
         with tempfile.TemporaryDirectory() as temp:

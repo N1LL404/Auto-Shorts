@@ -55,7 +55,9 @@ class ModelSettings:
         with self.lock:
             key = self.values.get("api_key", "")
         result = api_request(key, "/models")
-        return {"models": [r["id"] for r in result.get("data", [])
+        if not isinstance(result, dict) or not isinstance(result.get("data"), list):
+            raise ValueError("DeepSeek returned an invalid model list. Please retry.")
+        return {"models": [r["id"] for r in result["data"]
                            if isinstance(r, dict) and isinstance(r.get("id"), str)]}
 
     def test(self):
