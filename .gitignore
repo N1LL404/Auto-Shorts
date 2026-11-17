@@ -6,3 +6,6 @@ live-session/
 *.mkv
 *.ts
 studio-data/
+vendor/
+build/
+dist/

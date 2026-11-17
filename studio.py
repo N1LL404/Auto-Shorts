@@ -117,7 +117,8 @@ class Studio:
                     if os.name == "posix":
                         os.killpg(self.process.pid, signal.SIGINT)
                     else:
-                        self.process.terminate()
+                        subprocess.run(["taskkill", "/PID", str(self.process.pid), "/T", "/F"],
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 except ProcessLookupError:
                     pass
 
@@ -131,7 +132,7 @@ class Studio:
                 source = job.get("url")
                 live = False
                 if job.get("source_kind") == "upload":
-                    source = str(root / ("source" + Path(job["filename"]).suffix.lower()))
+                    source = job.get("local_source") or str(root / ("source" + Path(job["filename"]).suffix.lower()))
                     try:
                         _, _, audio = probe(source)
                         if not audio:
@@ -161,7 +162,9 @@ class Studio:
                         self.update(job, status="running", title=metadata.get("title") or job["url"],
                                     mode="live" if live else "recording",
                                     message="Capturing the live stream…" if live else "Downloading the recording…")
-                command = [sys.executable, "-u", str(ROOT / "autoshorts.py"), source,
+                worker = ([sys.executable, "--worker", str(root / "activity.log")] if getattr(sys, "frozen", False)
+                          else [sys.executable, "-u", str(ROOT / "autoshorts.py")])
+                command = [*worker, source,
                            "--output", str(root / "exports"), "--publish-kit", "--clips", "3"]
                 command += ["--selector", "deepseek", "--settings-file", str(self.settings.path),
                             "--whisper", self.settings.values["whisper"], "--captions"]

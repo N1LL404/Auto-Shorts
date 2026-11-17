@@ -2,6 +2,27 @@
 
 Find candidate highlights in DrDonut's Minecraft streams and render them as vertical Shorts. The default layout keeps the facecam above the action, with room for the hearts, armor, and hotbar. Clips open in a local review page where you can watch and download each export.
 
+## Desktop app (Windows)
+
+Run **Build Windows desktop app** from
+[GitHub Actions](https://github.com/N1LL404/Auto-Shorts/actions/workflows/desktop-windows.yml).
+When it completes, download the **AutoShorts-Windows-x64** artifact and extract the ZIPs,
+and double-click **AutoShorts.exe** inside the AutoShorts folder.
+
+The package includes Python, FFmpeg, FFprobe, yt-dlp, Node and transcription
+dependencies. Enter your DeepSeek API key, click **Download Whisper**, choose
+a video file or paste a URL, then click **Generate Shorts**. Whisper model
+weights download on first use. Clips open in your default video player.
+
+Settings and output are stored under `%LOCALAPPDATA%/AutoShorts`. Keep the
+executable and its `_internal` folder together. The Windows build is unsigned.
+
+To run the desktop interface from Python source, install the requirements and
+run `python desktop.py`. The web interface remains available with `python studio.py`.
+Developers can build Windows packages with the **Build Windows desktop app**
+GitHub workflow, which verifies the bundled tools and launches the packaged GUI
+before saving a downloadable build artifact. Builds are started manually.
+
 ## DeepSeek + local Whisper
 
 The studio now uses DeepSeek to read the transcript and select complete stories.

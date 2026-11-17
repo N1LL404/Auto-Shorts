@@ -64,7 +64,8 @@ class WorkflowTests(unittest.TestCase):
             self.assertNotIn("secret-key", json.dumps(public))
             manager.save({"api_key": "", "model": "my-model", "whisper": "small.en"})
             self.assertEqual(manager.values["api_key"], "secret-key")
-            self.assertEqual(manager.path.stat().st_mode & 0o777, 0o600)
+            if os.name != "nt":
+                self.assertEqual(manager.path.stat().st_mode & 0o777, 0o600)
             restored = ModelSettings(Path(temp), threading.RLock())
             self.assertEqual(restored.values["model"], "my-model")
             restored.save({"remove_key": True})
