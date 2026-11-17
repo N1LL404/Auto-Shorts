@@ -50,20 +50,47 @@ class Desktop:
         self.events = queue.Queue()
         self.rows = {}
         root.title("Auto-Shorts · DrDonut")
-        root.geometry("1030x800")
-        root.minsize(840, 650)
+        root.geometry("1180x900")
+        root.minsize(980, 800)
+        root.configure(background="#0b101b")
         style = ttk.Style(root)
         style.theme_use("clam")
-        style.configure("TFrame", background="#f4f5ef")
-        style.configure("TLabel", background="#f4f5ef")
-        style.configure("Title.TLabel", font=("Segoe UI", 22, "bold"))
-        style.configure("TButton", padding=7)
-        outer = ttk.Frame(root, padding=20)
-        outer.pack(fill="both", expand=True)
-        ttk.Label(outer, text="DrDonut Shorts Studio", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(outer, text="Choose a downloaded video or paste a stream link.").pack(anchor="w", pady=(3, 16))
-        settings = ttk.LabelFrame(outer, text="DeepSeek & Whisper", padding=12)
-        settings.pack(fill="x")
+        style.configure(".", background="#111a2a", foreground="#e5ecfa", font=("Segoe UI", 10))
+        style.configure("TFrame", background="#0b101b")
+        style.configure("TLabel", background="#0b101b", foreground="#a8b7cf")
+        style.configure("Title.TLabel", font=("Segoe UI", 26, "bold"), foreground="#ffffff")
+        style.configure("TLabelFrame", background="#0b101b", bordercolor="#28354c", relief="flat")
+        style.configure("TLabelFrame.Label", background="#0b101b", foreground="#8ea9d3", font=("Segoe UI", 10, "bold"))
+        style.configure("TButton", padding=(16, 10), background="#202e46", borderwidth=0)
+        style.map("TButton", background=[("active", "#304565"), ("disabled", "#182133")], foreground=[("disabled", "#64728a")])
+        style.configure("Accent.TButton", background="#7657f6", foreground="white", font=("Segoe UI", 11, "bold"))
+        style.map("Accent.TButton", background=[("active", "#9278ff"), ("disabled", "#352d58")])
+        style.configure("TEntry", fieldbackground="#172238", foreground="#ffffff", padding=9, bordercolor="#30415b")
+        style.configure("TCombobox", fieldbackground="#172238", background="#202e46", foreground="#ffffff", padding=7, arrowsize=14)
+        style.map("TCombobox", fieldbackground=[("readonly", "#172238")], foreground=[("readonly", "#ffffff")])
+        style.configure("TRadiobutton", background="#0b101b", padding=6)
+        style.map("TRadiobutton", background=[("active", "#172238")])
+        style.configure("TNotebook", background="#0b101b", borderwidth=0)
+        style.configure("TNotebook.Tab", padding=(24, 10), background="#111a2a")
+        style.map("TNotebook.Tab", background=[("selected", "#29345a")], foreground=[("selected", "#ffffff")])
+        style.configure("Treeview", background="#111a2a", fieldbackground="#111a2a", foreground="#e5ecfa", rowheight=38, borderwidth=0)
+        style.configure("Treeview.Heading", background="#1b2940", foreground="#9fb3d4", padding=10, relief="flat")
+        style.map("Treeview", background=[("selected", "#40356f")])
+        style.configure("Horizontal.TProgressbar", troughcolor="#202d43", background="#9278ff", borderwidth=0, thickness=8)
+        root.option_add("*TCombobox*Listbox.background", "#172238")
+        root.option_add("*TCombobox*Listbox.foreground", "#ffffff")
+        shell = ttk.Frame(root, padding=24)
+        shell.pack(fill="both", expand=True)
+        ttk.Label(shell, text="DRDONUT  /  SHORTS STUDIO", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(shell, text="Turn long streams into moments worth watching.").pack(anchor="w", pady=(4, 18))
+        tabs = ttk.Notebook(shell)
+        tabs.pack(fill="both", expand=True)
+        outer = ttk.Frame(tabs, padding=(16, 16))
+        settings = ttk.Frame(tabs, padding=24)
+        tabs.add(outer, text="Create & monitor")
+        tabs.add(settings, text="AI settings")
+        activity = ttk.Frame(tabs, padding=16)
+        tabs.add(activity, text="Activity log")
         settings.columnconfigure(1, weight=1)
         values = self.studio.settings.public()
         self.key = tk.StringVar()
@@ -92,7 +119,7 @@ class Desktop:
         self.whisper_status = tk.StringVar()
         ttk.Label(settings, textvariable=self.whisper_status, wraplength=900).grid(
             row=6, column=0, columnspan=2, sticky="w")
-        source = ttk.LabelFrame(outer, text="Source video", padding=12)
+        source = ttk.LabelFrame(outer, text="01  /  YOUR SOURCE", padding=12)
         source.pack(fill="x", pady=12)
         self.source_kind = tk.StringVar(value="file")
         choices = ttk.Frame(source)
@@ -106,17 +133,38 @@ class Desktop:
         ttk.Button(line, text="Choose video…", command=self.choose).pack(side="left", padx=(8, 0))
         actions = ttk.Frame(source)
         actions.pack(fill="x")
-        self.generate = ttk.Button(actions, text="Generate Shorts", command=self.start)
+        self.generate = ttk.Button(actions, text="Generate Shorts", style="Accent.TButton", command=self.start)
         self.generate.pack(side="left")
         self.stop_button = ttk.Button(actions, text="Stop", command=self.stop)
         self.stop_button.pack(side="left", padx=8)
         ttk.Button(actions, text="Open output folder", command=self.open_folder).pack(side="left")
         self.status = tk.StringVar(value="Ready")
         ttk.Label(outer, textvariable=self.status, wraplength=930).pack(anchor="w", pady=(0, 8))
+        monitor = ttk.LabelFrame(outer, text="02  /  LIVE WORKSPACE", padding=14)
+        monitor.pack(fill="x", pady=(0, 16))
+        self.progress_title = tk.StringVar(value="Ready for your next stream")
+        ttk.Label(monitor, textvariable=self.progress_title, font=("Segoe UI", 14, "bold"), foreground="#ffffff").pack(anchor="w")
+        self.progress_detail = tk.StringVar(value="Choose a video, then Generate Shorts.")
+        ttk.Label(monitor, textvariable=self.progress_detail).pack(anchor="w", pady=(5, 10))
+        self.progress_bar = ttk.Progressbar(monitor, maximum=100, mode="determinate")
+        self.progress_bar.pack(fill="x", ipady=3)
+        self.pipeline_detail = tk.StringVar(value="Pipeline · waiting to start")
+        ttk.Label(monitor, textvariable=self.pipeline_detail).pack(anchor="w", pady=(12, 6))
+        self.pipeline_bar = ttk.Progressbar(monitor, maximum=4, mode="determinate")
+        self.pipeline_bar.pack(fill="x")
+        steps = ttk.Frame(monitor)
+        steps.pack(fill="x", pady=(12, 0))
+        self.stage_labels = []
+        for label in ("SOURCE", "TRANSCRIBE", "AI SELECTION", "EXPORT"):
+            item = ttk.Label(steps, text=label, font=("Segoe UI", 10, "bold"))
+            item.pack(side="left", expand=True)
+            self.stage_labels.append(item)
+        self.progress_mode = None
+        ttk.Label(outer, text="03  /  YOUR CLIPS", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 8))
         self.jobs_box = ttk.Combobox(outer, state="readonly")
         self.jobs_box.pack(fill="x", pady=(0, 8))
         self.jobs_box.bind("<<ComboboxSelected>>", lambda event: self.refresh_clips())
-        self.clips = ttk.Treeview(outer, columns=("title", "range", "score"), show="headings", height=5)
+        self.clips = ttk.Treeview(outer, columns=("title", "range", "score"), show="headings", height=3)
         for name, label, width in [("title", "Clip", 560), ("range", "Source time", 130), ("score", "Score", 70)]:
             self.clips.heading(name, text=label)
             self.clips.column(name, width=width)
@@ -126,8 +174,8 @@ class Desktop:
         bar.pack(fill="x", pady=8)
         ttk.Button(bar, text="Play clip", command=self.open_clip).pack(side="left")
         ttk.Button(bar, text="Open post kit", command=lambda: self.open_clip("kit")).pack(side="left", padx=8)
-        self.log = tk.Text(outer, height=5, wrap="word", state="disabled")
-        self.log.pack(fill="x")
+        self.log = tk.Text(activity, height=4, wrap="word", state="disabled", background="#0e1625", foreground="#91a5c6", insertbackground="white", relief="flat", padx=12, pady=10, font=("Consolas", 9))
+        self.log.pack(fill="both", expand=True)
         self.job_ids = []
         self.clip_key = None
         root.protocol("WM_DELETE_WINDOW", self.close)
@@ -249,10 +297,12 @@ class Desktop:
              else "Select Prepare selected model to download an optional Whisper model."))
         job = self.current()
         if job:
+            self.update_progress(job)
             self.status.set(job["status"].capitalize() + " · " + job["message"])
             self.log.configure(state="normal")
             self.log.delete("1.0", "end")
-            self.log.insert("end", job["activity"])
+            self.log.insert("end", "\n".join(line for line in job["activity"].splitlines()
+                                            if not line.startswith("AUTOSHORTS_PROGRESS ")))
             self.log.configure(state="disabled")
             key = (job["id"], repr(job["clips"]))
             if key != self.clip_key:
@@ -266,6 +316,26 @@ class Desktop:
                         clip.get("hook") or clip.get("title", "Clip"),
                         f'{clip["start"]:.1f}–{clip["end"]:.1f}s', clip["score"]))
         self.root.after(1000, self.poll)
+
+    def update_progress(self, job):
+        from progress import snapshot
+        state = snapshot(job)
+        self.progress_title.set(state["title"])
+        self.progress_detail.set(state["detail"])
+        self.pipeline_bar["value"] = 4 if job["status"] == "done" else state["stage"]
+        self.pipeline_detail.set("Pipeline complete" if job["status"] == "done" else
+                                 f'Stage {state["stage"] + 1} of 4 · stage count, not a time estimate')
+        mode = "indeterminate" if state["percent"] is None and state["active"] else "determinate"
+        if mode != self.progress_mode:
+            self.progress_bar.stop()
+            self.progress_bar.configure(mode=mode)
+            if mode == "indeterminate":
+                self.progress_bar.start(15)
+            self.progress_mode = mode
+        if mode == "determinate":
+            self.progress_bar["value"] = state["percent"] or 0
+        for i, label in enumerate(self.stage_labels):
+            label.configure(foreground="#a28aff" if i == state["stage"] else "#62748f")
 
     def close(self):
         from studio import ACTIVE

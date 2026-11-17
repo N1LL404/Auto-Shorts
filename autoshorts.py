@@ -16,6 +16,7 @@ import tempfile
 import time
 from urllib.parse import urlparse
 import zipfile
+from progress import emit
 
 
 EVENTS = {
@@ -123,11 +124,21 @@ def transcribe(path, model):
     if not model:
         return []
     print("Transcribing speech and timing captions…", flush=True)
-    segments, _ = whisper_model(model).transcribe(
+    emit(1, detail="Loading Whisper and preparing audio")
+    segments, info = whisper_model(model).transcribe(
         str(path), language="en", vad_filter=True, word_timestamps=True)
-    return [{"start": s.start, "end": s.end, "text": s.text.strip(),
-             "words": [{"start": w.start, "end": w.end, "text": w.word.strip()}
-                       for w in (s.words or [])]} for s in segments]
+    result = []
+    last_percent = -1
+    for s in segments:
+        result.append({"start": s.start, "end": s.end, "text": s.text.strip(),
+                       "words": [{"start": w.start, "end": w.end, "text": w.word.strip()}
+                                 for w in (s.words or [])]})
+        percent = min(99, int(100 * s.end / max(info.duration, .001)))
+        if percent != last_percent:
+            emit(1, percent, f"Audio timeline {s.end:.0f}s / {info.duration:.0f}s")
+            last_percent = percent
+    emit(1, 100, f"Transcript ready · {len(result)} speech segments")
+    return result
 
 
 def rank(path, duration, has_audio, segments, chat, limit, min_length, max_length, peak_gate=None):
@@ -270,7 +281,7 @@ def layout(facecam, center):
     return f"[0:v]split=2[a][b];[a]{face}[face];[b]{game}[game];[face][game]vstack"
 
 
-def render(path, candidate, dest, args, segments, has_audio):
+def render(path, candidate, dest, args, segments, has_audio, clip_index=1, clip_count=1):
     hook = args.hook if args.hook is not None else candidate.hook
     with tempfile.TemporaryDirectory() as temp:
         overlay = Path(temp) / "overlay.ass"
@@ -287,7 +298,20 @@ def render(path, candidate, dest, args, segments, has_audio):
                         "-c:a", "aac", "-b:a", "160k"]
         temp_output = dest.with_suffix(".partial.mp4")
         try:
-            subprocess.run([*command, "-movflags", "+faststart", str(temp_output)], check=True)
+            render_command = [*command, "-progress", "pipe:1", "-nostats",
+                              "-movflags", "+faststart", str(temp_output)]
+            with subprocess.Popen(render_command, stdout=subprocess.PIPE, text=True) as worker:
+                for line in worker.stdout:
+                    if line.startswith("out_time_us="):
+                        try:
+                            seconds = int(line.partition("=")[2]) / 1000000
+                        except ValueError:
+                            continue
+                        fraction = min(.99, max(0, seconds / (candidate.end - candidate.start)))
+                        emit(3, 100 * (clip_index - 1 + fraction) / clip_count,
+                             f"Clip {clip_index} of {clip_count} · encoding {seconds:.1f}s / {candidate.end-candidate.start:.1f}s")
+                if worker.wait():
+                    raise subprocess.CalledProcessError(worker.returncode, render_command)
             temp_output.replace(dest)
         finally:
             temp_output.unlink(missing_ok=True)
@@ -381,14 +405,17 @@ def process(path, args, output, offset=0, peak_gate=None):
                 and getattr(args, "selector", "local") != "deepseek"):
             candidate.hook = auto_headline(segments, candidate)
         print(f"Rendering clip {index}…", flush=True)
-        hook = render(path, candidate, dest, args, segments, has_audio)
+        emit(3, 100 * (index - 1) / len(candidates), f"Clip {index} of {len(candidates)}")
+        hook = render(path, candidate, dest, args, segments, has_audio, index, len(candidates))
         row = vars(candidate).copy()
         row.update(index=index, file=dest.name, hook=hook)
         if getattr(args, "publish_kit", False):
+            emit(3, detail=f"Clip {index} of {len(candidates)} · creating cover and publishing kit")
             row.update(publish_kit(output, candidate, index, segments))
         for key in ("start", "end", "peak"):
             row[key] = round(row[key] + offset, 3)
         records.append(row)
+        emit(3, 100 * len(records) / len(candidates), f"{len(records)} of {len(candidates)} clips exported")
     review(output, records)
     print(f"{len(records)} clip(s) → {output / 'review.html'}", flush=True)
     return records

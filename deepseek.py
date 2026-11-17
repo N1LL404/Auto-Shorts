@@ -6,6 +6,7 @@ from pathlib import Path
 import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from progress import emit
 
 API = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-flash"
@@ -183,7 +184,9 @@ def select_clips(segments, duration, settings, limit, minimum, maximum, output, 
     if not segments:
         raise ValueError("Whisper found no speech. DeepSeek needs a transcript to select clips.")
     candidates, diagnostics = [], []
-    for number, (lo, hi) in enumerate(transcript_chunks(segments, maximum), start=1):
+    chunks = list(transcript_chunks(segments, maximum))
+    for number, (lo, hi) in enumerate(chunks, start=1):
+        emit(2, detail=f"DeepSeek reading section {number} of {len(chunks)}")
         print(f"DeepSeek is analyzing transcript section {number}…", flush=True)
         user = {"minimum_seconds": minimum, "maximum_seconds": maximum, "maximum_clips": limit,
                 "segments": [{"id": i, "start": s["start"], "end": s["end"], "text": s["text"]}
@@ -195,6 +198,7 @@ def select_clips(segments, duration, settings, limit, minimum, maximum, output, 
         diagnostics.append({"section": number, "attempt": 1, "issues": issues})
         if any(issue["status"] == "rejected" for issue in issues):
             print("DeepSeek is correcting clip boundaries…", flush=True)
+            emit(2, detail=f"Checking clip boundaries · section {number} of {len(chunks)}")
             user["correction"] = {
                 "previous_selection": response,
                 "validation_errors": issues,
@@ -219,6 +223,7 @@ def select_clips(segments, duration, settings, limit, minimum, maximum, output, 
         if gate:
             parsed = [row for row in parsed if gate[0] <= row["peak"] < gate[1]]
         candidates.extend(parsed)
+        emit(2, 100 * number / len(chunks), f"{number} of {len(chunks)} sections analyzed")
     chosen = []
     for candidate in sorted(candidates, key=lambda c: c["score"], reverse=True):
         if any(max(candidate["start"], other["start"]) < min(candidate["end"], other["end"])
