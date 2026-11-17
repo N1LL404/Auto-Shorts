@@ -309,12 +309,13 @@ def main():
 if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
+    worker_mode = "--worker" in sys.argv
     try:
         main()
     except Exception:
         import traceback
         traceback.print_exc()
-        if "--self-test" not in sys.argv and "--worker" not in sys.argv:
+        if "--self-test" not in sys.argv and not worker_mode:
             from tkinter import messagebox
             messagebox.showerror("Auto-Shorts", "The app could not start. See desktop.log in your AutoShorts data folder.")
         sys.exit(1)
