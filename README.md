@@ -41,13 +41,7 @@ The studio detects whether the link is live or recorded. It starts capturing
 a live broadcast from when you submit it and adds clips as they finish.
 For a completed recording it processes the video as a batch.
 
-With Docker and Compose installed:
-
-```bash
-docker compose up --build
-```
-
-For a native install, use Python 3.11+, FFmpeg/FFprobe with libass and libx264,
+Install Python 3.11+, FFmpeg/FFprobe with libass and libx264,
 DejaVu Sans, and Node.js 24+ or a supported Deno runtime for YouTube extraction:
 
 ```bash
@@ -65,10 +59,10 @@ message. Private, restricted, or upcoming streams may be unavailable.
 
 ## Command line
 
-Install Python 3.10+, DejaVu Sans, and FFmpeg (with FFprobe, libass and libx264). For stream URLs, install yt-dlp. For transcript scoring and burned-in captions, install faster-whisper and select a model. The model downloads at first use.
+Install Python 3.11+, DejaVu Sans, and FFmpeg (with FFprobe, libass and libx264). For stream URLs, install yt-dlp. For transcript scoring and burned-in captions, install faster-whisper and select a model. The model downloads at first use.
 
 ```bash
-python -m pip install -U yt-dlp faster-whisper
+python -m pip install -r requirements.txt
 python autoshorts.py "stream-recording.mp4" --output shorts-output
 ```
 
@@ -127,21 +121,15 @@ If you see “Whisper preparation failed”, update to this version and retry
 **AI Settings → Download Whisper**. The status now identifies missing packages,
 SOCKS proxy requirements, certificate problems, disk space and permissions.
 
-For Docker, rebuild the image so the compatible Whisper and PyAV versions are installed:
+Stop the studio, update the source and install the compatible dependencies:
 
 ```bash
 git pull
-docker compose build --no-cache
-docker compose up -d
-```
-
-The existing data and model volumes are retained. For native Python installs:
-
-```bash
 python -m pip install --upgrade -r requirements.txt
+python studio.py
 ```
 
-Restart the studio and retry the download. For a SOCKS proxy, also install
+Open AI Settings and retry the download. For a SOCKS proxy, also install
 `socksio`. Hugging Face must be reachable from the computer running the studio.
 
 Uploaded videos are streamed to the studio data directory and retained with their

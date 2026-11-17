@@ -32,7 +32,7 @@ The regression suite simulates provider and transcription responses. The real-se
 - Continue past silent windows in a live stream without invoking DeepSeek.
 - Show readable errors for malformed completion responses and model lists.
 
-The environment needed an additional SOCKS proxy dependency and system certificate configuration for external downloads. Those environment-specific changes are not part of the application. Browser visual testing and Docker build were unavailable here.
+The environment needed an additional SOCKS proxy dependency and system certificate configuration for external downloads. Those environment-specific changes are not part of the application. Browser visual testing was unavailable here.
 
 Credentials, source videos and private transcripts are excluded from the repository. Model-generated selections and transcriptions still need editorial review for content accuracy.
 

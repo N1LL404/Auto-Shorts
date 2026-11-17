@@ -95,7 +95,7 @@ class ModelSettings:
             if isinstance(exc, ImportError) and "socks" in detail:
                 message = "Your network uses a SOCKS proxy. Install socksio, then retry Whisper download."
             elif isinstance(exc, ImportError):
-                message = "Whisper dependencies are missing or incompatible. Reinstall requirements.txt, or rebuild the Docker image."
+                message = "Whisper dependencies are missing or incompatible. Run python -m pip install --upgrade -r requirements.txt, restart the studio, and retry."
             elif "certificate" in detail or "ssl" in detail:
                 message = "The model download failed certificate verification. Configure your network's trusted CA certificate and retry."
             elif isinstance(exc, PermissionError):
@@ -104,7 +104,7 @@ class ModelSettings:
                 message = "There is not enough disk space for the Whisper model. Free space and retry."
             else:
                 message = ("Whisper model download or loading failed (" + type(exc).__name__ +
-                           "). Check Hugging Face access and rebuild using the current requirements.txt. Retry the download.")
+                           "). Check Hugging Face access and reinstall the current requirements.txt. Retry the download.")
             with self.lock:
                 self.download = {"status": "error", "model": model,
                                  "message": message}
