@@ -1,7 +1,7 @@
 const el = (id) => document.getElementById(id);
-const active = new Set(["queued", "checking", "running", "stopping"]);
+const active = new Set(["uploading", "queued", "checking", "running", "stopping"]);
 const statusText = {
-  queued: "Queued", checking: "Checking URL", running: "Processing",
+  uploading: "Uploading", queued: "Queued", checking: "Checking URL", running: "Processing",
   stopping: "Stopping", stopped: "Stopped", done: "Complete", error: "Failed",
 };
 let selected = sessionStorage.getItem("auto-shorts-session");
@@ -158,7 +158,10 @@ el("source-form").addEventListener("submit", async (event) => {
   busy = true;
   el("generate").disabled = true;
   try {
-    const data = await request("/api/jobs", {url: el("stream").value});
+    const fileMode = document.querySelector('input[name="source-type"]:checked').value === "file";
+    const data = fileMode
+      ? await uploadVideo(el("video-file").files[0])
+      : await request("/api/jobs", {url: el("stream").value});
     selectJob(data.id);
   } catch (err) {
     el("form-error").textContent = err.message;
@@ -254,7 +257,7 @@ for (const [id, route] of [["discover-models", "models"], ["test-model", "test"]
           ? "Available models loaded. Select a model and save." : "No models were returned.";
       } else if (route === "whisper") {
         displaySettings(result, false);
-        el("settings-message").textContent = "Whisper preparation started.";
+        el("settings-message").textContent = "Whisper preparation requested. See its status below.";
       } else {
         el("settings-message").textContent = result.message || "API key removed.";
       }
@@ -270,3 +273,57 @@ setInterval(async () => {
   try { displaySettings(await request("/api/settings"), false); }
   catch (error) { el("whisper-status").textContent = error.message; }
 }, 2500);
+
+
+for (const choice of document.querySelectorAll('input[name="source-type"]')) {
+  choice.addEventListener("change", () => {
+    const fileMode = choice.value === "file";
+    el("stream").hidden = fileMode;
+    el("stream").required = !fileMode;
+    el("video-file").hidden = !fileMode;
+    el("video-file").required = fileMode;
+    el("source-label").textContent = fileMode ? "Downloaded video" : "Stream URL";
+    el("source-label").htmlFor = fileMode ? "video-file" : "stream";
+    el("input-hint").textContent = fileMode
+      ? "MP4, MKV, MOV, WebM, AVI, M4V or TS. Your video is processed by this local studio."
+      : "Works with active broadcasts and completed recordings.";
+  });
+}
+function uploadVideo(file) {
+  if (!file || !file.size) return Promise.reject(new Error("Choose a non-empty video file."));
+  el("upload-progress").hidden = false;
+  el("upload-progress").value = 0;
+  el("upload-status").hidden = false;
+  el("upload-status").textContent = "Uploading video…";
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/uploads");
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.setRequestHeader("X-Filename", encodeURIComponent(file.name));
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round(event.loaded / event.total * 100);
+        el("upload-progress").value = percent;
+        el("upload-status").textContent = percent === 100 ? "Upload received. Preparing video…" : "Uploading video… " + percent + "%";
+      }
+    };
+    xhr.onload = () => {
+      el("upload-progress").hidden = true;
+      try {
+        const result = JSON.parse(xhr.responseText);
+        if (xhr.status < 200 || xhr.status >= 300) throw new Error(result.error || "Upload failed.");
+        el("upload-status").textContent = "Upload complete.";
+        resolve(result);
+      } catch (error) {
+        el("upload-status").textContent = "Upload failed.";
+        reject(error);
+      }
+    };
+    xhr.onerror = () => {
+      el("upload-progress").hidden = true;
+      el("upload-status").textContent = "Upload interrupted.";
+      reject(new Error("Upload interrupted. Check the studio is running and try again."));
+    };
+    xhr.send(file);
+  });
+}

@@ -35,3 +35,10 @@ The regression suite simulates provider and transcription responses. The real-se
 The environment needed an additional SOCKS proxy dependency and system certificate configuration for external downloads. Those environment-specific changes are not part of the application. Browser visual testing and Docker build were unavailable here.
 
 Credentials, source videos and private transcripts are excluded from the repository. Model-generated selections and transcriptions still need editorial review for content accuracy.
+
+## Downloaded video upload and preparation diagnostics
+
+- Streamed the supplied recording through the actual HTTP upload endpoint and ran the background worker with real Whisper and DeepSeek. The job completed successfully. DeepSeek again returned no highlights for the stream/audio-check conversation.
+- Tested local source routing, normalized filenames, concurrent-job blocking, unsupported file rejection, and a specific Whisper proxy-dependency error message.
+- Regression suite: 14 tests passed, with the optional FFmpeg integration test skipped in this run because real media rendering had already been verified above.
+- Browser visual upload testing remains unverified in this environment.

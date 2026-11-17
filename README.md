@@ -36,7 +36,7 @@ First-time model preparation needs access to Hugging Face.
 ## Paste a URL in Studio
 
 Run the studio on your computer, open [localhost:8070](http://localhost:8070),
-paste a public Twitch or YouTube stream link, and click **Generate Shorts**.
+paste a public Twitch or YouTube stream link, or choose **Upload video** and select a downloaded recording. Click **Generate Shorts**. Uploads show progress and use the same saved Whisper and DeepSeek settings.
 The studio detects whether the link is live or recorded. It starts capturing
 a live broadcast from when you submit it and adds clips as they finish.
 For a completed recording it processes the video as a batch.
@@ -120,3 +120,30 @@ verified behavior, fixes and remaining live-source limitations.
 - The official [DeepSeek Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/)
   defines the JSON response format. The editable default is `deepseek-flash`;
   use the account model list in Settings to choose another available model.
+
+## Whisper preparation troubleshooting
+
+If you see “Whisper preparation failed”, update to this version and retry
+**AI Settings → Download Whisper**. The status now identifies missing packages,
+SOCKS proxy requirements, certificate problems, disk space and permissions.
+
+For Docker, rebuild the image so the compatible Whisper and PyAV versions are installed:
+
+```bash
+git pull
+docker compose build --no-cache
+docker compose up -d
+```
+
+The existing data and model volumes are retained. For native Python installs:
+
+```bash
+python -m pip install --upgrade -r requirements.txt
+```
+
+Restart the studio and retry the download. For a SOCKS proxy, also install
+`socksio`. Hugging Face must be reachable from the computer running the studio.
+
+Uploaded videos are streamed to the studio data directory and retained with their
+session. Available disk space is checked before accepting an upload. Interrupted
+uploads are removed and can be retried. Uploads do not require yt-dlp.

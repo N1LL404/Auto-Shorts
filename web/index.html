@@ -42,14 +42,21 @@
     </section>
     <section class="intro" aria-labelledby="page-title">
       <h1 id="page-title">Turn a stream into Shorts.</h1>
-      <p>Paste a Twitch or YouTube link. Whisper transcribes the stream. DeepSeek selects the best stories. Auto-Shorts renders vertical clips with captions, covers, and post copy.</p>
+      <p>Paste a Twitch or YouTube link, or upload a downloaded video. Whisper transcribes the stream. DeepSeek selects the best stories. Auto-Shorts renders vertical clips with captions, covers, and post copy.</p>
       <form id="source-form">
-        <label for="stream">Stream URL</label>
+        <div class="source-choices">
+          <label><input type="radio" name="source-type" value="url" checked> Stream URL</label>
+          <label><input type="radio" name="source-type" value="file"> Upload video</label>
+        </div>
+        <label id="source-label" for="stream">Stream URL</label>
         <div class="entry">
           <input id="stream" type="url" placeholder="https://www.twitch.tv/drdonut" autocomplete="url" spellcheck="false" required>
+          <input id="video-file" type="file" accept=".mp4,.mkv,.mov,.webm,.avi,.m4v,.ts" hidden>
           <button class="primary" id="generate">Generate Shorts <span aria-hidden="true">↗</span></button>
         </div>
         <p class="hint" id="input-hint">Works with active broadcasts and completed recordings.</p>
+        <progress id="upload-progress" max="100" value="0" hidden aria-label="Video upload progress"></progress>
+        <p id="upload-status" role="status" hidden></p>
         <p id="form-error" role="alert" hidden></p>
       </form>
     </section>

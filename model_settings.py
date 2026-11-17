@@ -90,7 +90,21 @@ class ModelSettings:
                 pending.write_text(json.dumps(self.ready))
                 pending.replace(self.ready_file)
                 self.download = {"status": "ready", "model": model, "message": f"{model} is ready."}
-        except Exception:
+        except Exception as exc:
+            detail = str(exc).lower()
+            if isinstance(exc, ImportError) and "socks" in detail:
+                message = "Your network uses a SOCKS proxy. Install socksio, then retry Whisper download."
+            elif isinstance(exc, ImportError):
+                message = "Whisper dependencies are missing or incompatible. Reinstall requirements.txt, or rebuild the Docker image."
+            elif "certificate" in detail or "ssl" in detail:
+                message = "The model download failed certificate verification. Configure your network's trusted CA certificate and retry."
+            elif isinstance(exc, PermissionError):
+                message = "Whisper cannot write to its model cache. Check the cache directory permissions."
+            elif isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:
+                message = "There is not enough disk space for the Whisper model. Free space and retry."
+            else:
+                message = ("Whisper model download or loading failed (" + type(exc).__name__ +
+                           "). Check Hugging Face access and rebuild using the current requirements.txt. Retry the download.")
             with self.lock:
                 self.download = {"status": "error", "model": model,
-                                 "message": "Whisper preparation failed. Check that faster-whisper is installed and Hugging Face is reachable, then retry."}
+                                 "message": message}
