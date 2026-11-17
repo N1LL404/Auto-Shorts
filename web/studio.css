@@ -1,0 +1,64 @@
+:root{color-scheme:dark;--bg:#111510;--panel:#191f17;--line:#323d2e;--text:#eef3e9;--muted:#aab6a6;--accent:#cbf79a}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "DM Sans",system-ui,sans-serif}
+button,input{font:inherit}
+button,a,summary{cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.shell{width:min(1200px,calc(100% - 56px));margin-inline:auto}
+.bar{border-bottom:1px solid var(--line)}
+.brand{height:66px;display:flex;align-items:center;gap:12px;font-weight:720;letter-spacing:-.02em}
+.mark{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:var(--accent);color:#162310}
+.mark svg{width:24px;height:24px}
+.profile,.pill{font-size:12px;color:var(--accent);background:#263923;border:1px solid #42553a;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.profile{margin-left:auto;letter-spacing:0}
+.dim,.hint{color:var(--muted)}
+.intro{padding:51px 0 42px}
+h1,h2,h3,p{margin:0}
+h1{font-size:clamp(33px,5.5vw,57px);letter-spacing:-.065em;line-height:1.04;font-weight:770}
+.intro>p{max-width:650px;color:var(--muted);margin-top:15px;font-size:16px}
+form{max-width:800px;margin-top:27px}
+label{display:block;font-weight:650;margin-bottom:7px}
+.entry{display:flex;align-items:stretch;gap:8px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:13px}
+input{min-width:0;flex:1;background:transparent;border:0;color:var(--text);padding:7px 12px;border-radius:6px}
+input::placeholder{color:#899786}
+.primary,.secondary,.card a,.card button{border-radius:7px;padding:9px 12px;text-decoration:none;font-weight:670}
+.primary{background:var(--accent);color:#172312;border:1px solid transparent;white-space:nowrap}
+.primary span{margin-left:6px}
+.primary:disabled,.secondary:disabled{cursor:default;opacity:.48}
+.secondary,.card a,.card button{color:var(--text);background:#242c21;border:1px solid #3b4836}
+button:not(:disabled):hover,.card a:hover{filter:brightness(1.14)}
+.hint,#form-error{font-size:13px;margin-top:8px}
+#form-error{color:#ffb4a7}
+.workspace{display:grid;grid-template-columns:225px minmax(0,1fr);gap:24px;padding-bottom:40px}
+.sessions,.results{border-top:1px solid var(--line);padding-top:15px}
+h2{font-size:18px;letter-spacing:-.035em}
+.sessions>p{margin-top:12px;font-size:13px}
+#jobs{list-style:none;padding:0;margin:12px 0;display:grid;gap:6px}
+#jobs button{color:var(--text);text-align:left;width:100%;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:9px 11px}
+#jobs button[aria-current]{border-color:#7e9e63;background:#253120}
+#jobs button span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#jobs button small{color:var(--muted)}
+.results-heading,.state-row{display:flex;align-items:center;gap:12px}
+.results-heading{margin-bottom:12px}
+.state-row{justify-content:space-between}
+.state{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px;margin-bottom:12px}
+.state h3{overflow-wrap:anywhere;font-size:17px;margin:3px 0}
+.state p.dim{margin-top:5px;font-size:13px}
+.eyebrow{font-size:11px;color:var(--accent);letter-spacing:.09em;text-transform:uppercase;font-weight:750}
+details{margin-top:11px;font-size:13px}
+pre{max-height:150px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted)}
+.empty{min-height:180px;display:grid;place-content:center;text-align:center;gap:6px;border:1px dashed var(--line);border-radius:11px;color:var(--muted);padding:18px}
+.empty-icon{font-size:36px;color:var(--accent);line-height:1}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,232px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.card video{width:100%;display:block;aspect-ratio:9/16;max-height:400px;object-fit:contain;background:#090c08}
+.card section{padding:12px;display:grid;gap:8px}
+.card h3{font-size:15px;overflow-wrap:anywhere}
+.card p{font-size:12px;color:var(--muted)}
+.card-footer{display:flex;gap:6px;flex-wrap:wrap}
+.card a,.card button{font-size:12px;padding:5px 8px}
+.card a:first-child{color:var(--accent)}
+#notice{margin-top:8px;font-size:13px;color:var(--accent)}
+@media(max-width:680px){.shell{width:calc(100% - 30px)}.workspace{grid-template-columns:1fr;gap:13px}.sessions{padding-top:10px}#jobs{display:flex;overflow:auto}#jobs li{flex:0 0 155px}.intro{padding:38px 0 23px}.card video{max-height:440px}}
+@media(max-width:440px){.entry{display:grid}.primary{width:100%}}

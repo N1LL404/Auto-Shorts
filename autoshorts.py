@@ -15,6 +15,7 @@ import subprocess
 import tempfile
 import time
 from urllib.parse import urlparse
+import zipfile
 
 
 EVENTS = {
@@ -121,7 +122,7 @@ def whisper_model(model):
 def transcribe(path, model):
     if not model:
         return []
-    print("Transcribing...", flush=True)
+    print("Transcribing speech and timing captions…", flush=True)
     segments, _ = whisper_model(model).transcribe(
         str(path), language="en", vad_filter=True, word_timestamps=True)
     return [{"start": s.start, "end": s.end, "text": s.text.strip(),
@@ -293,6 +294,42 @@ def render(path, candidate, dest, args, segments, has_audio):
     return re.sub(r"\*([^*]+)\*", r"\1", hook)
 
 
+def publish_kit(output, candidate, index, segments):
+    lines = [s for s in segments if s["start"] >= candidate.start and s["end"] <= candidate.end
+             and 8 <= len(s["text"]) <= 90 and len(s["text"].split()) >= 3]
+    near = [s for s in lines if abs(s["start"] - candidate.peak) <= 10]
+    line = min(near, key=lambda s: abs(s["start"] - candidate.peak))["text"] if near else ""
+    title = f"DrDonut: {line}" if line else "DrDonut on Donut SMP"
+    lead = f'“{line}”\n\n' if line else ""
+    caption = f"{lead}DrDonut on Donut SMP. #DrDonut #DonutSMP #Minecraft #Shorts"
+    name = f"clip-{index:02}"
+    cover = output / f"{name}.jpg"
+    kit = output / f"{name}.zip"
+    timestamp = max(0, min(candidate.end - candidate.start - .15, candidate.peak - candidate.start))
+    run("ffmpeg", "-v", "error", "-y", "-ss", str(timestamp), "-i", str(output / f"{name}.mp4"),
+        "-frames:v", "1", "-vf", "scale=540:960", "-threads", "1", str(cover))
+    temp = kit.with_suffix(".partial.zip")
+    try:
+        with zipfile.ZipFile(temp, "w") as archive:
+            archive.write(output / f"{name}.mp4", "short.mp4")
+            archive.write(cover, "cover.jpg")
+            archive.writestr("post.txt", f"{title}\n\n{caption}\n")
+        temp.replace(kit)
+    finally:
+        temp.unlink(missing_ok=True)
+    return {"title": title, "caption": caption, "cover": cover.name, "kit": kit.name}
+
+
+def auto_headline(segments, candidate):
+    nearby = [s for s in segments if s["start"] >= candidate.start and s["end"] <= candidate.end
+              and abs(s["start"] - candidate.peak) <= 12]
+    phrases = [re.sub(r"[^\w '?!.+-]", "", s["text"]).strip() for s in nearby]
+    short = [p for p in phrases if 8 <= len(p) <= 29 and len(p.split()) >= 3]
+    if short:
+        return next((p for p in short if REACTION.search(p)), short[0])
+    return candidate.hook or "DRDONUT ON *DONUT SMP*"
+
+
 def review(output, records):
     cards = []
     for row in records:
@@ -310,7 +347,9 @@ main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1
 article{background:#1b2029;border-radius:14px;padding:16px}video{width:100%;max-height:65vh;background:#000}
 a{color:#a4f6ad}p{color:#c9d0dc}</style><h1>Auto-Shorts review</h1><main>"""
     (output / "review.html").write_text(page + "".join(cards) + "</main></html>", encoding="utf-8")
-    (output / "clips.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
+    pending = output / ".clips.json"
+    pending.write_text(json.dumps(records, indent=2), encoding="utf-8")
+    pending.replace(output / "clips.json")
 
 
 def process(path, args, output, offset=0, peak_gate=None):
@@ -322,6 +361,7 @@ def process(path, args, output, offset=0, peak_gate=None):
             raise ValueError("Manual cut falls outside the source.")
         candidates = [Candidate(args.start, end, args.start, 0, [], "")]
     else:
+        print("Finding highlights…", flush=True)
         chat = Counter({t-int(offset): n for t, n in read_chat(args.chat).items()})
         candidates = rank(path, duration, has_audio, segments, chat, args.clips,
                           args.min_length, args.max_length, peak_gate)
@@ -330,9 +370,14 @@ def process(path, args, output, offset=0, peak_gate=None):
     for candidate in candidates:
         index = len(records) + 1
         dest = output / f"clip-{index:02}.mp4"
+        if getattr(args, "publish_kit", False) and args.hook is None:
+            candidate.hook = auto_headline(segments, candidate)
+        print(f"Rendering clip {index}…", flush=True)
         hook = render(path, candidate, dest, args, segments, has_audio)
         row = vars(candidate).copy()
         row.update(index=index, file=dest.name, hook=hook)
+        if getattr(args, "publish_kit", False):
+            row.update(publish_kit(output, candidate, index, segments))
         for key in ("start", "end", "peak"):
             row[key] = round(row[key] + offset, 3)
         records.append(row)
@@ -353,6 +398,10 @@ def stream_url(url):
     return url
 
 
+def yt_dlp_command():
+    return ["yt-dlp", "--js-runtimes", "node"] if shutil.which("node") else ["yt-dlp"]
+
+
 def capture_live(args):
     url = stream_url(args.source)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -362,7 +411,8 @@ def capture_live(args):
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         manifest = root / "capture.csv"
-        fetch = subprocess.Popen(["yt-dlp", "--no-playlist", "-f", "b[height<=1080]/b",
+        fetch = subprocess.Popen([*yt_dlp_command(), "--no-playlist", "--socket-timeout", "30",
+                                  "-f", "b[height<=1080][protocol^=m3u8]/b[height<=1080]/b",
                                   "-o", "-", "--", url], stdout=subprocess.PIPE)
         try:
             capture = subprocess.Popen([
@@ -423,11 +473,14 @@ def live_windows(args, root, manifest, capture):
                            for r in all_records[-12:]):
                         continue
                     row["index"] = len(all_records) + 1
-                    row["file"] = f"window-{first:04}/{row['file']}"
+                    for key in ("file", "cover", "kit"):
+                        if key in row:
+                            row[key] = f"window-{first:04}/{row[key]}"
                     all_records.append(row)
                 review(args.output, all_records)
                 if final_window:
                     break
+                print("Watching for the next live moment…", flush=True)
                 offset += lengths[0]
                 (root / Path(window[0][0]).name).unlink()
                 first += 1
@@ -455,6 +508,7 @@ def main():
     parser.add_argument("--hook", help="Headline to place at the facecam/gameplay seam")
     parser.add_argument("--whisper", metavar="MODEL", help="Optional faster-whisper model, e.g. base.en")
     parser.add_argument("--captions", action="store_true", help="Burn in captions from --whisper")
+    parser.add_argument("--publish-kit", action="store_true", help="Write a cover, post copy and ZIP for each clip")
     parser.add_argument("--chat", type=Path, help="JSONL with message timestamps in source seconds")
     parser.add_argument("--start", type=float, help="Manual cut start in seconds")
     parser.add_argument("--end", type=float, help="Manual cut end in seconds")
@@ -479,7 +533,8 @@ def main():
             url = stream_url(args.source)
             with tempfile.TemporaryDirectory() as directory:
                 source = Path(directory) / "source.mp4"
-                subprocess.run(["yt-dlp", "--no-playlist", "--no-progress",
+                subprocess.run([*yt_dlp_command(), "--no-playlist", "--no-progress",
+                                "--socket-timeout", "30",
                                 "--merge-output-format", "mp4", "--remux-video", "mp4",
                                 "-o", str(source.with_suffix(".%(ext)s")), "--", url], check=True)
                 process(source, args, args.output)

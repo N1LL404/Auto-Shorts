@@ -2,7 +2,37 @@
 
 Find candidate highlights in DrDonut's Minecraft streams and render them as vertical Shorts. The default layout keeps the facecam above the action, with room for the hearts, armor, and hotbar. Clips open in a local review page where you can watch and download each export.
 
-## Get started
+## Paste a URL in Studio
+
+Run the studio on your computer, open [localhost:8070](http://localhost:8070),
+paste a public Twitch or YouTube stream link, and click **Generate Shorts**.
+The studio detects whether the link is live or recorded. It starts capturing
+a live broadcast from when you submit it and adds clips as they finish.
+For a completed recording it processes the video as a batch.
+
+With Docker and Compose installed:
+
+```bash
+docker compose up --build
+```
+
+For a native install, use Python 3.11+, FFmpeg/FFprobe with libass and libx264,
+DejaVu Sans, and Node.js 24+ or a supported Deno runtime for YouTube extraction:
+
+```bash
+python -m pip install -r requirements.txt
+python studio.py
+```
+
+The first transcribed job downloads the local English Whisper model. Each
+clip comes with a video preview, an MP4, a cover, and a ZIP with the video
+and post copy. Use **Stop job** to end a live capture. Finished exports stay
+available when you restart the studio. No AI API key is needed. The studio
+runs locally and requires network access to read the stream and download
+the model. If extraction fails, open **Activity details** for yt-dlp's
+message. Private, restricted, or upcoming streams may be unavailable.
+
+## Command line
 
 Install Python 3.10+, DejaVu Sans, and FFmpeg (with FFprobe, libass and libx264). For stream URLs, install yt-dlp. For transcript scoring and burned-in captions, install faster-whisper and select a model. The model downloads at first use.
 

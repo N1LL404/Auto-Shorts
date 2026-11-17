@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto-Shorts Studio</title>
+  <link rel="stylesheet" href="/studio.css">
+  <script src="/studio.js" defer></script>
+</head>
+<body>
+  <header class="bar">
+    <div class="shell brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><path d="M10 7.5v13l10-6.5L10 7.5Z" fill="currentColor"/><path d="M4 4h5M4 4v5m20-5h-5m5 0v5M4 24h5m-5 0v-5m20 5h-5m5 0v-5" stroke="currentColor" stroke-width="1.5"/></svg></span>
+      <span>Auto-Shorts <span class="dim">Studio</span></span>
+      <span class="profile">DrDonut edition</span>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="intro" aria-labelledby="page-title">
+      <h1 id="page-title">Turn a stream into Shorts.</h1>
+      <p>Paste a Twitch or YouTube link. Auto-Shorts finds highlights and cuts them into vertical clips with captions, covers, and post copy.</p>
+      <form id="source-form">
+        <label for="stream">Stream URL</label>
+        <div class="entry">
+          <input id="stream" type="url" placeholder="https://www.twitch.tv/drdonut" autocomplete="url" spellcheck="false" required>
+          <button class="primary" id="generate">Generate Shorts <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="hint" id="input-hint">Works with active broadcasts and completed recordings.</p>
+        <p id="form-error" role="alert" hidden></p>
+      </form>
+    </section>
+    <div class="workspace">
+      <aside class="sessions" aria-label="Previous sessions">
+        <h2>Sessions</h2>
+        <p id="no-jobs" class="dim">Your jobs will appear here.</p>
+        <ul id="jobs"></ul>
+      </aside>
+      <section class="results" aria-labelledby="results-title">
+        <div class="results-heading">
+          <h2 id="results-title">Clips</h2>
+          <span class="pill" id="count" hidden></span>
+        </div>
+        <div id="job-state" class="state" hidden>
+          <div class="state-row">
+            <div><p id="status" class="eyebrow"></p><h3 id="job-title"></h3></div>
+            <button id="stop" class="secondary" hidden>Stop job</button>
+          </div>
+          <p id="message" class="dim" aria-live="polite"></p>
+          <details id="log-panel" hidden><summary>Activity details</summary><pre id="log"></pre></details>
+        </div>
+        <div class="empty" id="empty">
+          <div class="empty-icon" aria-hidden="true">▯</div>
+          <p id="empty-message">Generate your first Shorts to see them here.</p>
+        </div>
+        <div class="cards" id="clips"></div>
+        <p role="status" id="notice"></p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
