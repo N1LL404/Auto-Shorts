@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+shorts-output/
+live-session/
+*.mp4
+*.mkv
+*.ts
