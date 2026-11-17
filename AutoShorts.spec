@@ -4,6 +4,10 @@ from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 root = Path(SPECPATH)
 datas = [(str(root / "web"), "web"), (str(root / "prompts"), "prompts")]
+model_folder = root / "vendor" / "whisper" / "base.en"
+if not (model_folder / "model.bin").exists():
+    raise RuntimeError("Run packaging/fetch_whisper.py before building.")
+datas.append((str(model_folder), "whisper-models/base.en"))
 binaries = []
 hiddenimports = []
 for package in ("faster_whisper", "ctranslate2", "onnxruntime", "tokenizers", "av",

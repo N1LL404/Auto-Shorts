@@ -82,7 +82,7 @@ class Desktop:
         buttons.grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 0))
         for label, callback in [
             ("Save settings", self.save_settings), ("Load models", lambda: self.model_action("models")),
-            ("Test connection", lambda: self.model_action("test")), ("Download Whisper", self.prepare),
+            ("Test connection", lambda: self.model_action("test")), ("Prepare selected model", self.prepare),
             ("Remove key", self.remove_key),
         ]:
             ttk.Button(buttons, text=label, command=callback).pack(side="left", padx=(0, 6))
@@ -243,7 +243,10 @@ class Desktop:
         self.generate["state"] = "disabled" if busy else "normal"
         self.stop_button["state"] = "normal" if busy else "disabled"
         state = self.studio.settings.public()
-        self.whisper_status.set(state["download"]["message"])
+        self.whisper_status.set(
+            state["download"]["message"] or
+            ("Whisper base.en is included and ready." if state["whisper"] in state.get("bundled", [])
+             else "Select Prepare selected model to download an optional Whisper model."))
         job = self.current()
         if job:
             self.status.set(job["status"].capitalize() + " · " + job["message"])
@@ -288,7 +291,13 @@ def main():
     app = Desktop(root, data)
     if "--self-test" in sys.argv:
         from autoshorts import probe
-        from faster_whisper import WhisperModel
+        from whisper_bundle import load_whisper, bundled_model
+        assert bundled_model("base.en"), "Bundled Whisper model missing"
+        os.environ["HF_HUB_OFFLINE"] = "1"
+        whisper = load_whisper("base.en")
+        import numpy as np
+        segments, _ = whisper.transcribe(np.zeros(16000, dtype=np.float32), language="en", vad_filter=True)
+        list(segments)
         import av, onnxruntime, ctranslate2, tokenizers
         root.update()
         for executable in ("ffmpeg", "ffprobe", "node", "yt-dlp"):

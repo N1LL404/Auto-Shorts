@@ -113,10 +113,10 @@ def read_chat(path):
 @lru_cache(maxsize=1)
 def whisper_model(model):
     try:
-        from faster_whisper import WhisperModel
+        from whisper_bundle import load_whisper
+        return load_whisper(model)
     except ImportError as exc:
         raise ValueError("Install faster-whisper to use --whisper.") from exc
-    return WhisperModel(model, device="cpu", compute_type="int8")
 
 
 def transcribe(path, model):

@@ -10,9 +10,11 @@ When it completes, download the **AutoShorts-Windows-x64** artifact and extract 
 and double-click **AutoShorts.exe** inside the AutoShorts folder.
 
 The package includes Python, FFmpeg, FFprobe, yt-dlp, Node and transcription
-dependencies. Enter your DeepSeek API key, click **Download Whisper**, choose
-a video file or paste a URL, then click **Generate Shorts**. Whisper model
-weights download on first use. Clips open in your default video player.
+dependencies, plus the **Whisper base.en model weights**. Enter your DeepSeek
+API key, choose a video file or paste a URL, then click **Generate Shorts**.
+The included English model transcribes locally without a first-run download.
+Larger models remain optional downloads in Settings. Clips open in your default video player.
+Bundling base.en adds approximately 148 MB before ZIP compression.
 
 Settings and output are stored under `%LOCALAPPDATA%/AutoShorts`. Keep the
 executable and its `_internal` folder together. The Windows build is unsigned.
@@ -31,7 +33,7 @@ Open **AI Settings** before the first run:
 1. Enter your DeepSeek API key and click **Save settings**.
 2. Click **Load DeepSeek models**, choose a model available on your account, and save.
 3. Click **Test connection** to verify generation. This makes a small billed API call.
-4. Choose a local Whisper model and click **Download Whisper**. Wait for “ready”.
+4. In the desktop app, **base.en** is bundled and ready. For another model, use **Prepare selected model**. In the web interface, use **Download Whisper**.
 5. Paste your YouTube or Twitch link and click **Generate Shorts**.
 
 For completed videos, the app downloads the full recording, transcribes it with
@@ -52,7 +54,8 @@ Your API key is saved in the local data directory with restricted file permissio
 and is never returned to the browser. Blank key input preserves the saved key.
 Use **Remove key** to delete it. Keep this local data directory private.
 DeepSeek charges your account for analysis. Whisper does not require an API key.
-First-time model preparation needs access to Hugging Face.
+Only optional model downloads and source installations need Hugging Face access.
+The packaged base.en model is loaded directly from the app folder.
 
 ## Paste a URL in Studio
 
@@ -70,7 +73,7 @@ python -m pip install -r requirements.txt
 python studio.py
 ```
 
-If you have not prepared Whisper in Settings, the first job downloads the selected model. Each
+In source installations, the first job downloads the selected model if it has not been prepared. The desktop package includes base.en. Each
 clip comes with a video preview, an MP4, a cover, and a ZIP with the video
 and post copy. Use **Stop job** to end a live capture. Finished exports stay
 available when you restart the studio. Your saved DeepSeek API key is used for analysis. The studio

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import threading
 
+from whisper_bundle import bundled_model, load_whisper
 from deepseek import DEFAULT_MODEL, WHISPER_MODELS, api_request, completion, load_settings
 
 
@@ -18,6 +19,8 @@ class ModelSettings:
             self.ready = json.loads(self.ready_file.read_text())
         except (OSError, ValueError):
             self.ready = []
+        if bundled_model("base.en"):
+            self.ready = sorted(set(self.ready + ["base.en"]))
 
     def public(self):
         with self.lock:
@@ -25,6 +28,7 @@ class ModelSettings:
                     "model": self.values.get("model", DEFAULT_MODEL),
                     "whisper": self.values.get("whisper", "base.en"),
                     "whisper_choices": WHISPER_MODELS, "ready": list(self.ready),
+                    "bundled": ["base.en"] if bundled_model("base.en") else [],
                     "download": self.download.copy()}
 
     def save(self, data):
@@ -81,8 +85,7 @@ class ModelSettings:
 
     def _prepare(self, model):
         try:
-            from faster_whisper import WhisperModel
-            instance = WhisperModel(model, device="cpu", compute_type="int8")
+            instance = load_whisper(model)
             del instance
             with self.lock:
                 self.ready = sorted(set(self.ready + [model]))

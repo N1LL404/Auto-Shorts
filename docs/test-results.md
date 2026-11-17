@@ -42,3 +42,18 @@ Credentials, source videos and private transcripts are excluded from the reposit
 - Tested local source routing, normalized filenames, concurrent-job blocking, unsupported file rejection, and a specific Whisper proxy-dependency error message.
 - Regression suite: 14 tests passed, with the optional FFmpeg integration test skipped in this run because real media rendering had already been verified above.
 - Browser visual upload testing remains unverified in this environment.
+
+## Bundled Whisper base.en
+
+The Windows packaging configuration now includes the pinned base.en model weights,
+tokenizer, vocabulary and configuration. Files are checksum-verified before
+packaging. The packaged self-test loads the model with local-only access and
+runs transcription on a short silent sample.
+
+A separate real test copied the model into an app-style model directory, used an
+empty Hugging Face cache, enabled offline mode, and made the model download
+function raise if called. The supplied recording transcribed successfully into
+10 segments and 95 timestamped words. No model download was attempted.
+
+Regression suite: 17 tests passed and the optional real-video rendering test was
+skipped. The Windows executable itself still requires the manual Windows build.

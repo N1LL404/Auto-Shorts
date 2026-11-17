@@ -204,7 +204,8 @@ function displaySettings(data, fill = true) {
   downloadingWhisper = data.download.status === "downloading";
   el("prepare-whisper").disabled = downloadingWhisper;
   el("whisper-status").textContent = data.download.message ||
-    (data.ready.includes(data.whisper) ? data.whisper + " is ready."
+    (data.bundled?.includes(data.whisper) ? data.whisper + " is bundled and ready." :
+     data.ready.includes(data.whisper) ? data.whisper + " is ready."
       : "Download Whisper now, or it will download when your first job starts.");
 }
 async function loadSettings() {
