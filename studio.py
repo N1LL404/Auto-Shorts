@@ -17,6 +17,7 @@ from uuid import uuid4
 from urllib.parse import urlsplit
 
 from autoshorts import stream_url, yt_dlp_command
+from model_settings import ModelSettings
 
 
 ROOT = Path(__file__).resolve().parent
@@ -38,6 +39,7 @@ class Studio:
         self.directory.mkdir(parents=True, exist_ok=True)
         self.model = model
         self.lock = threading.RLock()
+        self.settings = ModelSettings(directory, self.lock)
         self.jobs = {}
         self.process = None
         for path in directory.glob("*/job.json"):
@@ -69,6 +71,8 @@ class Studio:
                 raise ValueError("FFmpeg and FFprobe must be installed. See the setup instructions.")
         stream_url(url)
         with self.lock:
+            if not self.settings.values.get("api_key"):
+                raise ValueError("Open AI Settings and save your DeepSeek API key first.")
             if any(job["status"] in ACTIVE for job in self.jobs.values()):
                 raise RuntimeError("A stream is already processing. Stop it to start another.")
             job = dict(id=uuid4().hex[:12], url=url, title=url, mode=None,
@@ -136,8 +140,8 @@ class Studio:
                                 message="Capturing the live stream…" if live else "Downloading the recording…")
                 command = [sys.executable, "-u", str(ROOT / "autoshorts.py"), job["url"],
                            "--output", str(root / "exports"), "--publish-kit", "--clips", "3"]
-                if self.model:
-                    command += ["--whisper", self.model, "--captions"]
+                command += ["--selector", "deepseek", "--settings-file", str(self.settings.path),
+                            "--whisper", self.settings.values["whisper"], "--captions"]
                 if live:
                     command.append("--live")
                 code = self.execute(job, command, log, subprocess.STDOUT)
@@ -246,6 +250,8 @@ class Handler(BaseHTTPRequestHandler):
         studio = self.server.studio
         if route in ("/", "/studio.css", "/studio.js"):
             self.send_file(ROOT / "web" / ("index.html" if route == "/" else route[1:]))
+        elif route == "/api/settings":
+            self.json_response(studio.settings.public())
         elif route == "/api/jobs":
             with studio.lock:
                 self.json_response(list(reversed(list(studio.jobs.values()))))
@@ -269,7 +275,29 @@ class Handler(BaseHTTPRequestHandler):
             return
         studio = self.server.studio
         try:
-            if self.path == "/api/jobs":
+            if self.path.startswith("/api/settings"):
+                size = int(self.headers.get("Content-Length", "0"))
+                if not 0 < size <= 8192:
+                    raise ValueError("Invalid settings request.")
+                data = json.loads(self.rfile.read(size))
+                if not isinstance(data, dict):
+                    raise ValueError("Invalid settings request.")
+                if self.path == "/api/settings":
+                    with studio.lock:
+                        if any(j["status"] in ACTIVE for j in studio.jobs.values()):
+                            raise RuntimeError("Stop the active job before changing AI settings.")
+                        result = studio.settings.save(data)
+                elif self.path == "/api/settings/models":
+                    result = studio.settings.discover()
+                elif self.path == "/api/settings/test":
+                    result = studio.settings.test()
+                elif self.path == "/api/settings/whisper":
+                    result = studio.settings.prepare()
+                else:
+                    self.json_response({"error": "Unknown settings action."}, 404)
+                    return
+                self.json_response(result)
+            elif self.path == "/api/jobs":
                 size = int(self.headers.get("Content-Length", "0"))
                 if not 0 < size <= 8192:
                     raise ValueError("Paste a single stream URL.")

@@ -12,13 +12,37 @@
     <div class="shell brand">
       <span class="mark" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><path d="M10 7.5v13l10-6.5L10 7.5Z" fill="currentColor"/><path d="M4 4h5M4 4v5m20-5h-5m5 0v5M4 24h5m-5 0v-5m20 5h-5m5 0v-5" stroke="currentColor" stroke-width="1.5"/></svg></span>
       <span>Auto-Shorts <span class="dim">Studio</span></span>
-      <span class="profile">DrDonut edition</span>
+      <span class="profile">DrDonut edition</span><button id="settings-toggle" class="secondary" type="button" aria-expanded="false">AI Settings</button>
     </div>
   </header>
   <main class="shell">
+    <section id="settings-panel" class="state settings-panel" hidden aria-label="AI Settings">
+      <h2>AI Settings</h2>
+      <p class="dim">Whisper transcribes audio on your computer. DeepSeek receives the transcript to select complete stories and write clip headlines. DeepSeek API usage is billed to your account.</p>
+      <form id="settings-form">
+        <label for="api-key">DeepSeek API key</label>
+        <input id="api-key" type="password" autocomplete="new-password" placeholder="Paste your key">
+        <p class="hint" id="key-state"></p>
+        <label for="deepseek-model">DeepSeek model</label>
+        <input id="deepseek-model" list="deepseek-models" required>
+        <datalist id="deepseek-models"></datalist>
+        <label for="whisper-model">Local Whisper model</label>
+        <select id="whisper-model"><option>base.en</option></select>
+        <p class="hint">Larger models generally need more memory and processing time.</p>
+        <div class="settings-actions">
+          <button class="primary" type="submit">Save settings</button>
+          <button class="secondary" id="discover-models" type="button">Load DeepSeek models</button>
+          <button class="secondary" id="test-model" type="button">Test connection</button>
+          <button class="secondary" id="prepare-whisper" type="button">Download Whisper</button>
+          <button class="secondary" id="remove-key" type="button">Remove key</button>
+        </div>
+        <p id="settings-message" role="status" class="hint"></p>
+        <p id="whisper-status" role="status" class="hint"></p>
+      </form>
+    </section>
     <section class="intro" aria-labelledby="page-title">
       <h1 id="page-title">Turn a stream into Shorts.</h1>
-      <p>Paste a Twitch or YouTube link. Auto-Shorts finds highlights and cuts them into vertical clips with captions, covers, and post copy.</p>
+      <p>Paste a Twitch or YouTube link. Whisper transcribes the stream. DeepSeek selects the best stories. Auto-Shorts renders vertical clips with captions, covers, and post copy.</p>
       <form id="source-form">
         <label for="stream">Stream URL</label>
         <div class="entry">

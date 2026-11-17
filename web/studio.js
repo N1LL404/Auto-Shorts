@@ -116,7 +116,7 @@ function showJob(job) {
   el("status").textContent = job.status === "running" && job.mode === "live" ? "Capturing live" : statusText[job.status];
   el("job-title").textContent = job.title;
   const stage = job.activity.split("\n").reverse().find((line) =>
-    /^(Transcribing|Finding highlights|Rendering clip|Capturing live stream|Watching for)/.test(line));
+    /^(Transcribing|Finding highlights|Rendering clip|Capturing live stream|Watching for|DeepSeek)/.test(line));
   el("message").textContent = job.status === "running" && stage ? stage : job.message;
   el("stop").hidden = !active.has(job.status);
   el("stop").disabled = job.status === "stopping";
@@ -181,3 +181,92 @@ el("stop").addEventListener("click", async () => {
 });
 refresh();
 setInterval(refresh, 2400);
+
+let settingsLoaded = false;
+let downloadingWhisper = false;
+
+function displaySettings(data, fill = true) {
+  if (fill) {
+    el("deepseek-model").value = data.model;
+    el("whisper-model").replaceChildren(...data.whisper_choices.map((model) => {
+      const option = node("option", model);
+      option.value = model;
+      return option;
+    }));
+    el("whisper-model").value = data.whisper;
+  }
+  el("key-state").textContent = data.has_key
+    ? "Key saved locally. Leave the field empty to keep it."
+    : "Save your DeepSeek key to enable clip selection.";
+  downloadingWhisper = data.download.status === "downloading";
+  el("prepare-whisper").disabled = downloadingWhisper;
+  el("whisper-status").textContent = data.download.message ||
+    (data.ready.includes(data.whisper) ? data.whisper + " is ready."
+      : "Download Whisper now, or it will download when your first job starts.");
+}
+async function loadSettings() {
+  try {
+    displaySettings(await request("/api/settings"));
+    settingsLoaded = true;
+  } catch (error) {
+    el("settings-message").textContent = error.message;
+  }
+}
+el("settings-toggle").addEventListener("click", () => {
+  const open = el("settings-panel").hidden;
+  el("settings-panel").hidden = !open;
+  el("settings-toggle").setAttribute("aria-expanded", String(open));
+  if (open && !settingsLoaded) loadSettings();
+});
+async function saveSettings(remove = false) {
+  const data = await request("/api/settings", {
+    api_key: remove ? "" : el("api-key").value,
+    model: el("deepseek-model").value,
+    whisper: el("whisper-model").value,
+    remove_key: remove,
+  });
+  el("api-key").value = "";
+  displaySettings(data);
+  return data;
+}
+el("settings-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    await saveSettings();
+    el("settings-message").textContent = "Settings saved.";
+  } catch (error) {
+    el("settings-message").textContent = error.message;
+  }
+});
+for (const [id, route] of [["discover-models", "models"], ["test-model", "test"],
+                           ["prepare-whisper", "whisper"], ["remove-key", null]]) {
+  el(id).addEventListener("click", async () => {
+    el(id).disabled = true;
+    el("settings-message").textContent = "Working…";
+    try {
+      await saveSettings(id === "remove-key");
+      const result = route ? await request("/api/settings/" + route, {}) : {};
+      if (route === "models") {
+        el("deepseek-models").replaceChildren(...result.models.map(model => {
+          const option = node("option"); option.value = model; return option;
+        }));
+        el("settings-message").textContent = result.models.length
+          ? "Available models loaded. Select a model and save." : "No models were returned.";
+      } else if (route === "whisper") {
+        displaySettings(result, false);
+        el("settings-message").textContent = "Whisper preparation started.";
+      } else {
+        el("settings-message").textContent = result.message || "API key removed.";
+      }
+    } catch (error) {
+      el("settings-message").textContent = error.message;
+    } finally {
+      el(id).disabled = id === "prepare-whisper" && downloadingWhisper;
+    }
+  });
+}
+setInterval(async () => {
+  if (!downloadingWhisper) return;
+  try { displaySettings(await request("/api/settings"), false); }
+  catch (error) { el("whisper-status").textContent = error.message; }
+}, 2500);

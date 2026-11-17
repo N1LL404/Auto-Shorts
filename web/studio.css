@@ -62,3 +62,10 @@ pre{max-height:150px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;c
 #notice{margin-top:8px;font-size:13px;color:var(--accent)}
 @media(max-width:680px){.shell{width:calc(100% - 30px)}.workspace{grid-template-columns:1fr;gap:13px}.sessions{padding-top:10px}#jobs{display:flex;overflow:auto}#jobs li{flex:0 0 155px}.intro{padding:38px 0 23px}.card video{max-height:440px}}
 @media(max-width:440px){.entry{display:grid}.primary{width:100%}}
+
+.settings-panel{margin-top:22px}
+.settings-panel form{margin-top:16px;max-width:100%}
+.settings-panel input,.settings-panel select{display:block;width:min(100%,550px);padding:10px;background:#111510;border:1px solid var(--line);border-radius:7px;color:var(--text)}
+.settings-panel label{margin-top:14px}
+.settings-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+@media(max-width:440px){.profile{display:none}.brand>button{margin-left:auto}}

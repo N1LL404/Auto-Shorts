@@ -2,6 +2,37 @@
 
 Find candidate highlights in DrDonut's Minecraft streams and render them as vertical Shorts. The default layout keeps the facecam above the action, with room for the hearts, armor, and hotbar. Clips open in a local review page where you can watch and download each export.
 
+## DeepSeek + local Whisper
+
+The studio now uses DeepSeek to read the transcript and select complete stories.
+Open **AI Settings** before the first run:
+
+1. Enter your DeepSeek API key and click **Save settings**.
+2. Click **Load DeepSeek models**, choose a model available on your account, and save.
+3. Click **Test connection** to verify generation. This makes a small billed API call.
+4. Choose a local Whisper model and click **Download Whisper**. Wait for “ready”.
+5. Paste your YouTube or Twitch link and click **Generate Shorts**.
+
+For completed videos, the app downloads the full recording, transcribes it with
+word timestamps, analyzes every transcript section with DeepSeek, removes
+overlapping candidates, and renders the highest-scoring clips. For active streams,
+it performs the same steps on rolling windows as footage arrives.
+
+The DrDonut editing instructions are in
+[prompts/drdonut-editor.md](prompts/drdonut-editor.md). They tell DeepSeek to find
+a setup, payoff and reaction, prefer standalone stories, and preserve sentence
+boundaries. Returned segment IDs are checked against the actual transcript.
+DeepSeek-selected hooks are retained in the rendered video. Empty selections
+are allowed when a transcript has no strong moments. API failures surface as
+errors and do not silently switch to motion-based selection.
+
+Whisper runs locally. Transcript text is sent to DeepSeek for analysis.
+Your API key is saved in the local data directory with restricted file permissions
+and is never returned to the browser. Blank key input preserves the saved key.
+Use **Remove key** to delete it. Keep this local data directory private.
+DeepSeek charges your account for analysis. Whisper does not require an API key.
+First-time model preparation needs access to Hugging Face.
+
 ## Paste a URL in Studio
 
 Run the studio on your computer, open [localhost:8070](http://localhost:8070),
@@ -24,10 +55,10 @@ python -m pip install -r requirements.txt
 python studio.py
 ```
 
-The first transcribed job downloads the local English Whisper model. Each
+If you have not prepared Whisper in Settings, the first job downloads the selected model. Each
 clip comes with a video preview, an MP4, a cover, and a ZIP with the video
 and post copy. Use **Stop job** to end a live capture. Finished exports stay
-available when you restart the studio. No AI API key is needed. The studio
+available when you restart the studio. Your saved DeepSeek API key is used for analysis. The studio
 runs locally and requires network access to read the stream and download
 the model. If extraction fails, open **Activity details** for yt-dlp's
 message. Private, restricted, or upcoming streams may be unavailable.
@@ -67,3 +98,24 @@ python autoshorts.py "stream-recording.mp4" --start 2 --end 34 \
 [Read the reference analysis and validation notes](docs/reference-analysis.md).
 
 [AutoClip](https://github.com/zhouxiaoka/autoclip) informed the analyze, review, export flow. [OpenShorts](https://github.com/mutonby/openshorts) informed the stacked presentation and seam placement. Auto-Shorts implements the DrDonut layout and scoring pipeline locally.
+
+## Verification
+
+Run `PYTHONPATH=. python -m unittest discover -s tests -v` to check transcript
+boundary validation, chunk coverage, duplicate removal, API error handling,
+credential persistence and the Settings HTTP endpoints. Tests use simulated
+DeepSeek responses and do not spend API credits.
+
+The paid DeepSeek call and real Whisper download still require verification on
+your machine with your credentials and network access.
+
+## Reference implementation reviewed
+
+- AutoClip’s [AI model settings](https://github.com/zhouxiaoka/autoclip/blob/main/docs/AI_MODEL_CONFIGURATION.md)
+  define provider credentials, connection testing, model discovery and local model preparation.
+- Its [timeline extraction](https://github.com/zhouxiaoka/autoclip/blob/main/backend/pipeline/step2_timeline.py)
+  and [scoring](https://github.com/zhouxiaoka/autoclip/blob/main/backend/pipeline/step3_scoring.py)
+  informed transcript chunking, checked timeline selection and ranking.
+- The official [DeepSeek Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/)
+  defines the JSON response format. The editable default is `deepseek-flash`;
+  use the account model list in Settings to choose another available model.

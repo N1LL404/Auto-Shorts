@@ -8,7 +8,8 @@ COPY --from=javascript /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
-COPY autoshorts.py studio.py ./
+COPY autoshorts.py studio.py deepseek.py model_settings.py ./
+COPY prompts/ ./prompts/
 COPY web/ ./web/
 EXPOSE 8070
 CMD ["python", "studio.py", "--host", "0.0.0.0", "--data", "/data"]

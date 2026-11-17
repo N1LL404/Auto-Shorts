@@ -353,13 +353,20 @@ a{color:#a4f6ad}p{color:#c9d0dc}</style><h1>Auto-Shorts review</h1><main>"""
 
 
 def process(path, args, output, offset=0, peak_gate=None):
+    output.mkdir(parents=True, exist_ok=True)
     duration, _, has_audio = probe(path)
     segments = transcribe(path, args.whisper) if has_audio else []
+    (output / "transcript.json").write_text(json.dumps(segments, ensure_ascii=False), encoding="utf-8")
     if args.start is not None:
         end = min(duration, args.end)
         if not math.isfinite(args.end) or not 0 <= args.start < end:
             raise ValueError("Manual cut falls outside the source.")
         candidates = [Candidate(args.start, end, args.start, 0, [], "")]
+    elif getattr(args, "selector", "local") == "deepseek":
+        from deepseek import load_settings, select_clips
+        picks = select_clips(segments, duration, load_settings(args.settings_file), args.clips,
+                             args.min_length, args.max_length, output, peak_gate)
+        candidates = [Candidate(**row) for row in picks]
     else:
         print("Finding highlights…", flush=True)
         chat = Counter({t-int(offset): n for t, n in read_chat(args.chat).items()})
@@ -370,7 +377,8 @@ def process(path, args, output, offset=0, peak_gate=None):
     for candidate in candidates:
         index = len(records) + 1
         dest = output / f"clip-{index:02}.mp4"
-        if getattr(args, "publish_kit", False) and args.hook is None:
+        if (getattr(args, "publish_kit", False) and args.hook is None
+                and getattr(args, "selector", "local") != "deepseek"):
             candidate.hook = auto_headline(segments, candidate)
         print(f"Rendering clip {index}…", flush=True)
         hook = render(path, candidate, dest, args, segments, has_audio)
@@ -508,6 +516,8 @@ def main():
     parser.add_argument("--hook", help="Headline to place at the facecam/gameplay seam")
     parser.add_argument("--whisper", metavar="MODEL", help="Optional faster-whisper model, e.g. base.en")
     parser.add_argument("--captions", action="store_true", help="Burn in captions from --whisper")
+    parser.add_argument("--selector", choices=("local", "deepseek"), default="local")
+    parser.add_argument("--settings-file", type=Path)
     parser.add_argument("--publish-kit", action="store_true", help="Write a cover, post copy and ZIP for each clip")
     parser.add_argument("--chat", type=Path, help="JSONL with message timestamps in source seconds")
     parser.add_argument("--start", type=float, help="Manual cut start in seconds")
@@ -521,6 +531,8 @@ def main():
         parser.error("Set gameplay center to 0–1 and segment length to at least 10 seconds.")
     if (args.start is None) != (args.end is None) or (args.live and args.start is not None):
         parser.error("Use --start and --end together on a recording.")
+    if args.selector == "deepseek" and not args.whisper:
+        parser.error("DeepSeek selection requires --whisper MODEL.")
     if args.captions and not args.whisper:
         parser.error("--captions requires --whisper MODEL.")
     for program in ("ffmpeg", "ffprobe"):
