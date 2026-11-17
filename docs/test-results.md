@@ -57,3 +57,29 @@ function raise if called. The supplied recording transcribed successfully into
 
 Regression suite: 17 tests passed and the optional real-video rendering test was
 skipped. The Windows executable itself still requires the manual Windows build.
+
+## DeepSeek boundary recovery
+
+The selector now accepts exact integer ID representations, calculates duration
+from transcript timestamps after clamping small end-of-video rounding errors,
+and can extend a slightly short selection by up to five seconds of nearby
+speech. It preserves the selected story and peak; it does not guess unknown
+IDs, truncate overlong stories, or pad very short moments.
+
+Rejected selections receive one correction request with specific validation
+errors. Valid selections survive mixed responses and failed boundary
+corrections. Unrecoverable selections are skipped so later transcript sections
+can still produce clips. Per-section reasons are written to
+selection-diagnostics.json without API keys or transcript text.
+
+Regression checks cover numeric representations, fractional/unknown IDs,
+short-clip recovery, source and section limits, live peak gates, mixed valid
+and invalid responses, empty selections, and continuation after repeated
+invalid boundaries. These use deterministic DeepSeek responses; they do not
+reproduce the user's unavailable failing API response.
+
+All 29 tests passed, including real FFmpeg export of a generated test video to
+a 30-second 1080x1920 MP4 with audio, captions, cover and publishing ZIP.
+Transcription and DeepSeek responses were fixtures in that rendering test.
+The Windows executable was not rebuilt or tested in this environment.
+

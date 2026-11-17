@@ -47,9 +47,12 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(result[0]["hook"], PICK["hook"])
         with tempfile.TemporaryDirectory() as temp, patch("deepseek.completion",
                 return_value={"clips": [dict(PICK, end_id=500)]}):
-            with self.assertRaisesRegex(ValueError, "invalid clip boundaries"):
-                deepseek.select_clips(SEGMENTS, 150, {"api_key": "secret", "model": "example"},
-                                      3, 25, 55, Path(temp))
+            result = deepseek.select_clips(SEGMENTS, 150, {"api_key": "secret", "model": "example"},
+                                          3, 25, 55, Path(temp))
+            self.assertEqual(result, [])
+            report = (Path(temp) / "selection-diagnostics.json").read_text()
+            self.assertIn("rejected", report)
+            self.assertNotIn("secret", report)
 
     def test_errors_do_not_expose_key(self):
         error = HTTPError("https://api.deepseek.com", 401, "secret-key-here", {}, None)
